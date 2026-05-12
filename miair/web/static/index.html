@@ -891,6 +891,172 @@
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
         }
+
+        /* 更新弹窗 */
+        .update-modal .modal {
+            max-width: 520px;
+        }
+
+        .update-version-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .update-version-arrow {
+            color: var(--accent);
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .update-version-info {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .update-version-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+
+        .update-version-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .update-version-new .update-version-value {
+            color: #34d399;
+        }
+
+        .release-notes-section {
+            margin-bottom: 16px;
+        }
+
+        .release-notes-header {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .release-notes-content {
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 14px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .release-notes-content h1,
+        .release-notes-content h2,
+        .release-notes-content h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text);
+            margin: 10px 0 6px;
+        }
+
+        .release-notes-content h1:first-child,
+        .release-notes-content h2:first-child,
+        .release-notes-content h3:first-child {
+            margin-top: 0;
+        }
+
+        .release-notes-content ul,
+        .release-notes-content ol {
+            margin: 4px 0;
+            padding-left: 20px;
+        }
+
+        .release-notes-content li {
+            margin: 2px 0;
+        }
+
+        .release-notes-content code {
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .release-notes-content pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 6px 0;
+        }
+
+        .release-notes-content pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .release-notes-content a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .release-notes-content p {
+            margin: 4px 0;
+        }
+
+        .release-notes-content hr {
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            margin: 10px 0;
+        }
+
+        .update-progress {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 16px;
+            background: rgba(59, 130, 246, 0.08);
+            border-radius: 10px;
+            margin-bottom: 16px;
+            color: var(--accent);
+            font-size: 14px;
+        }
+
+        .update-spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(59, 130, 246, 0.2);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .update-error {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 14px 16px;
+            background: rgba(239, 68, 68, 0.08);
+            border-radius: 10px;
+            margin-bottom: 16px;
+            color: #ef4444;
+            font-size: 13px;
+            line-height: 1.5;
+        }
     </style>
 </head>
 
@@ -943,7 +1109,7 @@
 
                 <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
                     <button class="btn btn-primary" id="btn-save" disabled onclick="saveSelection()">
-                        保存并重新启动
+                        应用
                     </button>
                 </div>
 
@@ -1045,7 +1211,7 @@
 
                 <div style="display: flex; justify-content: flex-end;">
                     <button class="btn btn-primary" id="btn-save-experimental" onclick="saveExperimental()">
-                        保存并重新启动
+                        应用
                     </button>
                 </div>
 
@@ -1089,7 +1255,50 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeAccountModal()">取消</button>
                 <button class="btn btn-primary" id="btn-login" onclick="loginXiaomi()">
-                    登录并重新启动
+                    登录
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Modal -->
+    <div class="modal-overlay update-modal" id="modal-update">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="update-modal-title">发现新版本</div>
+                <div class="modal-desc" id="update-modal-desc"></div>
+            </div>
+
+            <div class="update-version-row">
+                <div class="update-version-info">
+                    <span class="update-version-label">当前版本</span>
+                    <span class="update-version-value" id="update-current-ver"></span>
+                </div>
+                <span class="update-version-arrow">&rarr;</span>
+                <div class="update-version-info update-version-new">
+                    <span class="update-version-label">最新版本</span>
+                    <span class="update-version-value" id="update-latest-ver"></span>
+                </div>
+            </div>
+
+            <div class="release-notes-section" id="release-notes-section" style="display:none;">
+                <div class="release-notes-header">更新日志</div>
+                <div class="release-notes-content" id="release-notes-content"></div>
+            </div>
+
+            <div id="update-progress" style="display:none;">
+                <div class="update-progress">
+                    <div class="update-spinner"></div>
+                    <span>正在更新，请勿关闭页面...</span>
+                </div>
+            </div>
+
+            <div id="update-error" style="display:none;"></div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="btn-update-cancel" onclick="closeUpdateModal()">稍后更新</button>
+                <button class="btn btn-primary" id="btn-update-confirm" onclick="executeUpdate()">
+                    一键更新
                 </button>
             </div>
         </div>
@@ -1098,14 +1307,23 @@
     <script>
         let currentSetting = {};
         let initialLoaded = false;
+        let _latestRelease = null;
+        let _initialFormValues = null;
+        let _initialSelectedDids = null;
+        let _initialDeviceNames = null;
 
         document.addEventListener('DOMContentLoaded', init);
 
         async function init() {
             await fetchSetting(true);
+            let devicesLoaded = currentSetting.renderers_count > 0;
             setInterval(() => {
-                fetchSetting(false);
+                // 设备列表未加载时持续请求，直到设备出现
+                fetchSetting(!devicesLoaded);
                 if (currentSetting.dlna_running) fetchRenderers();
+                if (!devicesLoaded && currentSetting.renderers_count > 0) {
+                    devicesLoaded = true;
+                }
             }, 5000);
         }
 
@@ -1174,6 +1392,17 @@
                 document.getElementById('chk-auto-restart').checked = data.auto_restart;
             }
             toggleDefaultVolume();
+
+            // 保存初始值快照，用于变更检测
+            _initialFormValues = {
+                auto_resume_on_interrupt: document.getElementById('chk-auto-resume').checked,
+                resume_delay_seconds: parseInt(document.getElementById('input-resume-delay').value),
+                default_volume: parseInt(document.getElementById('input-default-volume').value),
+                follow_device_volume: document.getElementById('chk-follow-volume').checked,
+                auto_restart: document.getElementById('chk-auto-restart').checked,
+                dlna_port: parseInt(document.getElementById('input-dlna-port').value),
+                web_port: parseInt(document.getElementById('input-web-port').value),
+            };
         }
 
         function toggleDefaultVolume() {
@@ -1197,10 +1426,16 @@
                 const latestVersion = data.tag_name; // 例如 v0.3.2
 
                 if (compareVersions(latestVersion, currentVersion) > 0) {
+                    _latestRelease = data;
+                    _latestRelease._currentVersion = currentVersion;
                     const updateLink = document.getElementById('update-link');
-                    updateLink.innerHTML = `<a href="${data.html_url}" class="update-badge" target="_blank">
-                        发现新版本
-                    </a>`;
+                    const badge = document.createElement('a');
+                    badge.className = 'update-badge';
+                    badge.href = 'javascript:void(0)';
+                    badge.textContent = '发现新版本';
+                    badge.onclick = function() { showUpdateModal(); };
+                    updateLink.innerHTML = '';
+                    updateLink.appendChild(badge);
                 }
             } catch (e) {
                 console.warn('Update check failed:', e);
@@ -1226,6 +1461,179 @@
             }
             return 0;
         }
+
+        // ========== 一键更新功能 ==========
+
+        function showUpdateModal() {
+            if (!_latestRelease) return;
+            const data = _latestRelease;
+            const currentVer = data._currentVersion || currentSetting.version;
+            const latestVer = (data.tag_name || '').replace(/^v/i, '');
+
+            document.getElementById('update-current-ver').textContent = 'V' + currentVer;
+            document.getElementById('update-latest-ver').textContent = 'V' + latestVer;
+            document.getElementById('update-modal-title').textContent = data.name || '发现新版本';
+
+            // 显示更新日志
+            const body = data.body || '';
+            const notesSection = document.getElementById('release-notes-section');
+            if (body.trim()) {
+                notesSection.style.display = 'block';
+                document.getElementById('release-notes-content').innerHTML = mdToHtml(body);
+            } else {
+                notesSection.style.display = 'none';
+            }
+
+            // 重置弹窗状态
+            document.getElementById('update-progress').style.display = 'none';
+            document.getElementById('update-error').style.display = 'none';
+            document.getElementById('btn-update-confirm').disabled = false;
+            document.getElementById('btn-update-cancel').disabled = false;
+            document.getElementById('btn-update-confirm').textContent = '一键更新';
+
+            document.getElementById('modal-update').classList.add('active');
+        }
+
+        function closeUpdateModal() {
+            document.getElementById('modal-update').classList.remove('active');
+        }
+
+        async function executeUpdate() {
+            const btnConfirm = document.getElementById('btn-update-confirm');
+            const btnCancel = document.getElementById('btn-update-cancel');
+            const progress = document.getElementById('update-progress');
+            const errorDiv = document.getElementById('update-error');
+
+            // 进入加载状态
+            btnConfirm.disabled = true;
+            btnCancel.disabled = true;
+            btnConfirm.textContent = '更新中...';
+            progress.style.display = 'block';
+            errorDiv.style.display = 'none';
+
+            try {
+                const resp = await fetch('/api/update', { method: 'POST' });
+                const data = await resp.json();
+
+                if (data.ok) {
+                    btnConfirm.textContent = '更新成功';
+                    progress.querySelector('span').textContent = '更新成功，正在重启服务...';
+
+                    // 轮询等待服务重启完成
+                    let waited = 0;
+                    const maxWait = 60000;
+                    const interval = 2000;
+                    while (waited < maxWait) {
+                        await new Promise(r => setTimeout(r, interval));
+                        waited += interval;
+                        try {
+                            const r = await fetch('/api/status', { signal: AbortSignal.timeout(3000) });
+                            if (r.ok) {
+                                // 服务已重启，刷新页面
+                                window.location.reload();
+                                return;
+                            }
+                        } catch (_) {
+                            // 服务还在重启中，继续等待
+                        }
+                    }
+                    // 超时后直接刷新
+                    window.location.reload();
+                } else {
+                    throw new Error(data.error || '未知错误');
+                }
+            } catch (e) {
+                progress.style.display = 'none';
+                errorDiv.style.display = 'flex';
+                errorDiv.innerHTML = `<span style="flex-shrink:0;">&#9888;</span><span>更新失败：${e.message}</span>`;
+                btnConfirm.disabled = false;
+                btnCancel.disabled = false;
+                btnConfirm.textContent = '重试';
+            }
+        }
+
+        function mdToHtml(md) {
+            if (!md) return '';
+            let html = '';
+            let inCodeBlock = false;
+            let inList = false;
+            const lines = md.split('\n');
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i];
+
+                // 代码块
+                if (line.trimStart().startsWith('```')) {
+                    if (inCodeBlock) {
+                        html += '</code></pre>';
+                        inCodeBlock = false;
+                    } else {
+                        if (inList) { html += '</ul>'; inList = false; }
+                        html += '<pre><code>';
+                        inCodeBlock = true;
+                    }
+                    continue;
+                }
+                if (inCodeBlock) {
+                    html += line.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '\n';
+                    continue;
+                }
+
+                // 标题
+                if (/^### /.test(line)) {
+                    if (inList) { html += '</ul>'; inList = false; }
+                    html += '<h3>' + inlineMd(line.slice(4)) + '</h3>';
+                    continue;
+                }
+                if (/^## /.test(line)) {
+                    if (inList) { html += '</ul>'; inList = false; }
+                    html += '<h2>' + inlineMd(line.slice(3)) + '</h2>';
+                    continue;
+                }
+                if (/^# /.test(line)) {
+                    if (inList) { html += '</ul>'; inList = false; }
+                    html += '<h1>' + inlineMd(line.slice(2)) + '</h1>';
+                    continue;
+                }
+
+                // 分割线
+                if (/^(-{3,}|\*{3,}|_{3,})$/.test(line.trim())) {
+                    if (inList) { html += '</ul>'; inList = false; }
+                    html += '<hr>';
+                    continue;
+                }
+
+                // 列表项
+                if (/^\s*[-*+] /.test(line)) {
+                    if (!inList) { html += '<ul>'; inList = true; }
+                    html += '<li>' + inlineMd(line.replace(/^\s*[-*+] /, '')) + '</li>';
+                    continue;
+                }
+
+                // 普通段落
+                if (inList) { html += '</ul>'; inList = false; }
+                const trimmed = line.trim();
+                if (trimmed) {
+                    html += '<p>' + inlineMd(trimmed) + '</p>';
+                }
+            }
+            if (inCodeBlock) html += '</code></pre>';
+            if (inList) html += '</ul>';
+            return html;
+        }
+
+        function inlineMd(text) {
+            return text
+                .replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/__(.+?)__/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/_(.+?)_/g, '<em>$1</em>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>');
+        }
+
+        // ========== 一键更新功能 END ==========
 
         function updateStatusBar(data) {
             const bar = document.getElementById('status-bar');
@@ -1316,6 +1724,15 @@
             });
             container.innerHTML = html;
             document.getElementById('btn-save').disabled = false;
+
+            // 记录初始选中状态和设备名，用于变更检测
+            _initialSelectedDids = selectedList.filter(Boolean).sort().join(',');
+            _initialDeviceNames = {};
+            devices.forEach(dev => {
+                const did = dev.miotDID;
+                _initialDeviceNames[did] = (currentSetting.speakers && currentSetting.speakers[did])
+                    ? currentSetting.speakers[did].dlna_name : dev.name;
+            });
         }
 
         function toggleDevice(el, did) {
@@ -1332,6 +1749,22 @@
             const btn = document.getElementById('btn-save');
             const selected = Array.from(document.querySelectorAll('.device-item.selected'))
                 .map(item => item.querySelector('input').getAttribute('onblur').match(/'([^']+)'/)[1]);
+
+            // 检查是否有变更（选中列表 + 设备名称）
+            const currentDids = selected.sort().join(',');
+            let namesChanged = false;
+            if (_initialDeviceNames) {
+                document.querySelectorAll('.device-name-input').forEach(input => {
+                    const did = input.getAttribute('onblur').match(/'([^']+)'/)[1];
+                    if (_initialDeviceNames[did] !== undefined && input.value !== _initialDeviceNames[did]) {
+                        namesChanged = true;
+                    }
+                });
+            }
+            if (!namesChanged && _initialSelectedDids !== null && currentDids === _initialSelectedDids) {
+                showTip(document.getElementById('tip-save'), '没有变更的设置项', 'error');
+                return;
+            }
 
             showLoading(btn, true, '正在保存');
             try {
@@ -1385,6 +1818,16 @@
                 dlna_port: parseInt(document.getElementById('input-dlna-port').value),
                 web_port: parseInt(document.getElementById('input-web-port').value),
             };
+
+            // 检查是否有变更
+            if (_initialFormValues) {
+                const changed = Object.keys(data).some(key => data[key] !== _initialFormValues[key]);
+                if (!changed) {
+                    const tip = document.getElementById('tip-experimental');
+                    showTip(tip, '没有变更的设置项', 'error');
+                    return;
+                }
+            }
 
             showLoading(btn, true, '正在保存');
             try {

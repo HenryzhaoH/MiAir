@@ -4,6 +4,10 @@ import json
 import logging
 import os
 import sys
+import tarfile
+import tempfile
+import urllib.request
+import urllib.error
 
 from aiohttp import web
 
@@ -39,6 +43,12 @@ def _is_docker():
     except Exception:
         pass
     return False
+
+
+def _get_app_dir():
+    """获取应用根目录（miair 包的上级目录）"""
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 def _restart_process():
     """重启当前 Python 进程"""
@@ -259,6 +269,85 @@ def create_web_app(config: Config, app_instance) -> web.Application:
             "web_port": config.web_port,
         })
 
+    async def handle_execute_update(request):
+        """执行一键更新：从 GitHub 下载最新代码覆盖后重启"""
+        app_dir = _get_app_dir()
+        in_docker = _is_docker()
+        url = "https://github.com/KiriChen-Wind/MiAir/archive/refs/heads/main.tar.gz"
+
+        log.info(f"开始一键更新 (目录: {app_dir}, Docker: {in_docker})")
+
+        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".tar.gz")
+        try:
+            # 下载最新代码压缩包
+            log.info(f"正在下载更新: {url}")
+            urllib.request.urlretrieve(url, tmp_file.name)
+            tmp_file.close()
+
+            # 解压并覆盖当前代码
+            log.info("正在解压更新...")
+            import shutil
+            with tarfile.open(tmp_file.name, "r:gz") as tar:
+                members = tar.getmembers()
+                prefix = members[0].name.split("/")[0] + "/"
+
+                for member in members:
+                    if not member.name.startswith(prefix):
+                        continue
+                    member.name = member.name[len(prefix):]
+                    if not member.name:
+                        continue
+
+                    target = os.path.join(app_dir, member.name)
+                    if member.isdir():
+                        os.makedirs(target, exist_ok=True)
+                    elif member.isfile():
+                        parent = os.path.dirname(target)
+                        if parent:
+                            os.makedirs(parent, exist_ok=True)
+                        src = tar.extractfile(member)
+                        if src:
+                            with open(target, "wb") as dst:
+                                shutil.copyfileobj(src, dst)
+
+            # Docker 环境下重新安装依赖（可能有新增依赖）
+            if in_docker:
+                import subprocess
+                try:
+                    pyproject = os.path.join(app_dir, "pyproject.toml")
+                    if os.path.exists(pyproject):
+                        subprocess.run(
+                            [sys.executable, "-m", "pip", "install", "--no-cache-dir", "."],
+                            cwd=app_dir,
+                            capture_output=True,
+                            timeout=120,
+                        )
+                except Exception as e:
+                    log.warning(f"更新后重新安装依赖失败: {e}")
+
+            log.info("更新下载并解压完成")
+
+        except Exception as e:
+            log.error(f"更新失败: {e}")
+            return web.json_response(
+                {"ok": False, "error": f"更新失败: {e}"},
+                status=500,
+            )
+        finally:
+            try:
+                os.unlink(tmp_file.name)
+            except OSError:
+                pass
+
+        # 更新完成后重启
+        resp = web.json_response({"ok": True, "message": "更新完成，正在重启..."})
+        await resp.prepare(request)
+        await resp.write_eof()
+
+        log.info("一键更新完成，正在重启进程...")
+        asyncio.get_running_loop().call_soon(_restart_process)
+        return resp
+
     # 注册路由
     web_app.router.add_get("/", handle_index)
     web_app.router.add_get("/api/setting", handle_get_setting)
@@ -267,6 +356,7 @@ def create_web_app(config: Config, app_instance) -> web.Application:
     web_app.router.add_get("/api/speakers", handle_get_speakers)
     web_app.router.add_post("/api/speakers/{did}/rename", handle_rename_speaker)
     web_app.router.add_get("/api/status", handle_status)
+    web_app.router.add_post("/api/update", handle_execute_update)
 
     # 静态文件
     import os
