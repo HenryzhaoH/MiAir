@@ -97,6 +97,54 @@ def _unmask_cookie(new_cookie: str, current_cookie: str) -> str:
     return "; ".join(parts)
 
 
+def _mask_devices(device_list, required_fields=['miotDID','hardware','name']):
+    """按白名单裁剪设备信息，仅保留 required_fields 指定的字段。
+
+    Args:
+        device_list: 单个设备 dict，或设备 dict 组成的列表。
+        required_fields: 需要保留的字段名列表，支持用点号表示嵌套路径
+            （如 "capabilities.multiroom_music"）。
+
+    Returns:
+        仅含指定字段、并保持原嵌套结构的设备。设备中不存在的字段会被跳过。
+        输入为列表时返回列表，输入为单个 dict 时返回单个 dict。
+    """
+    single = not isinstance(device_list, list)
+    devices = [device_list] if single else device_list
+
+    _MISSING = object()
+    result = []
+    for device in devices:
+        masked = {}
+        for field in required_fields:
+            keys = field.split(".")
+
+            # 沿路径逐级取值，任一级缺失或非 dict 则跳过该字段
+            value = device
+            for k in keys:
+                if isinstance(value, dict) and k in value:
+                    value = value[k]
+                else:
+                    value = _MISSING
+                    break
+            if value is _MISSING:
+                continue
+
+            # 沿路径逐级写入，重建嵌套结构
+            target = masked
+            for k in keys[:-1]:
+                nested = target.get(k)
+                if not isinstance(nested, dict):
+                    nested = {}
+                    target[k] = nested
+                target = nested
+            target[keys[-1]] = value
+
+        result.append(masked)
+
+    return result[0] if single else result
+
+
 def _is_docker():
     """检测是否在 Docker 容器中运行"""
     # 1. 环境变量显式指定（最可靠）
@@ -203,7 +251,7 @@ def create_web_app(config: Config, app_instance) -> web.Application:
 
         if need_device_list:
             device_list = await app_instance.get_all_devices()
-            data["device_list"] = device_list
+            data["device_list"] = _mask_devices(device_list)
 
         return web.json_response(data)
 
@@ -281,7 +329,7 @@ def create_web_app(config: Config, app_instance) -> web.Application:
                     "devices": [],
                     "error": "登录失败，请检查账号密码或尝试使用 Cookie 登录"
                 })
-            return web.json_response({"devices": devices})
+            return web.json_response({"devices": _mask_devices(devices)})
         except Exception as e:
             return web.json_response(
                 {"error": f"获取设备列表失败: {e}"}, status=500
